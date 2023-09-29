@@ -72,9 +72,9 @@ if [ "${CREATE_RELEASE}" = "true" ] || [ "${CREATE_RELEASE}" = true ]; then
   OUTPUT=$(curl -s --data "${JSON_STRING}" -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases")
   echo "${OUTPUT}" | jq
   
-  # Generate changelog
-  CHANGELOG=$(git log --pretty=format:'- %s (%h)' ${LAST_HASH}..HEAD)
-  echo "::set-output name=changelog::${CHANGELOG}"
+  CHANGELOG=$(git log --pretty=format:'- %s (%h)' "${LAST_HASH}"..HEAD)
+  printf -v FORMATTED_CHANGELOG "%s" "${CHANGELOG}"
+  echo "::set-output name=changelog::${FORMATTED_CHANGELOG}"
   echo "Result:${CHANGELOG}"
 fi
 
