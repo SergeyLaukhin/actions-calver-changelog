@@ -74,9 +74,9 @@ if [ "${CREATE_RELEASE}" = "true" ] || [ "${CREATE_RELEASE}" = true ]; then
   
   # Generate changelog
   CHANGELOG=""
-  while IFS= read -r line; do
+  git log --pretty=format:'- %s (%h)' "${LAST_HASH}"..HEAD | while IFS= read -r line; do
     CHANGELOG="${CHANGELOG}${line}\n"
-  done < <(git log --pretty=format:'- %s (%h)' "${LAST_HASH}"..HEAD)
+  done
   echo "::set-output name=changelog::${CHANGELOG}"
 fi
 
