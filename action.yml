@@ -1,6 +1,6 @@
-name: 'Calver Release'
-description: 'Automatically create Calver compliant tags or releases based on PR labels'
-author: 'Stéphane Bour'
+name: 'Calver Release With Changelog'
+description: 'Automatically create Calver compliant tags or releases based on PR labels (with changelog)'
+author: 'Sergey Laukhin'
 
 branding:
   icon: 'tag'
@@ -43,6 +43,8 @@ inputs:
 outputs:
   release:
     description: 'The newly created release'
+  changelog:
+    description: 'The changelog for the release'
 
 runs:
   using: 'docker'
