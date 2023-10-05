@@ -46,7 +46,7 @@ if [ "$(git rev-parse HEAD)" != "${LAST_HASH}" ]; then
   echo "Last major release : ${MAJOR_LAST_RELEASE}"
 
   if [ "${MAJOR_LAST_RELEASE}" = "${NEXT_RELEASE}" ]; then
-    MINOR_LAST_RELEASE="$(echo "${LAST_RELEASE}" | awk -v l=$((${#NEXT_RELEASE} + 2)) '{ string=substr($0, l); print string; }')"
+    MINOR_LAST_RELEASE=$(echo "${LAST_RELEASE}" | awk -v l=$((${#NEXT_RELEASE} + 2)) '{ string=substr($0, l); print string; }')
     NEXT_RELEASE=${MAJOR_LAST_RELEASE}.$((MINOR_LAST_RELEASE + 1))
     echo "Minor release"
   fi
@@ -76,15 +76,15 @@ if [ "$(git rev-parse HEAD)" != "${LAST_HASH}" ]; then
     echo "${JSON_STRING}"
     OUTPUT=$(curl -s --data "${JSON_STRING}" -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases")
     echo "${OUTPUT}" | jq
-  }
+  fi
 else
   echo "No new commits, using the last release: ${LAST_RELEASE}"
   NEXT_RELEASE="${LAST_RELEASE}"
+
+  # Output the changelog
+  echo "::set-output name=changelog::${CHANGELOG}"
 fi
 
-# Output the changelog
-echo "::set-output name=changelog::${CHANGELOG}"
-echo "Result:${CHANGELOG}"
+echo "release=${NEXT_RELEASE}" >> $GITHUB_OUTPUT
 
-echo "release=${NEXT_RELEASE}" >>$GITHUB_OUTPUT
 
