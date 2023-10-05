@@ -34,48 +34,57 @@ echo "Last release : ${LAST_RELEASE}"
 
 LAST_HASH="$(git show-ref -s "${LAST_RELEASE}")"
 echo "Last hash : ${LAST_HASH}"
-# ColemanB - End changes.
 
-MAJOR_LAST_RELEASE=$(echo "${LAST_RELEASE}" | awk -v l=${#NEXT_RELEASE} '{ string=substr($0, 1, l); print string; }')
-echo "Last major release : ${MAJOR_LAST_RELEASE}"
+# Get the changelog from the last release
+CHANGELOG=$(git log --pretty=format:'- %s (%h)' "${LAST_HASH}"..HEAD | tr '\n' ' |')
 
-if [ "${MAJOR_LAST_RELEASE}" = "${NEXT_RELEASE}" ]; then
-  MINOR_LAST_RELEASE="$(echo "${LAST_RELEASE}" | awk -v l=$((${#NEXT_RELEASE} + 2)) '{ string=substr($0, l); print string; }')"
-  NEXT_RELEASE=${MAJOR_LAST_RELEASE}.$((MINOR_LAST_RELEASE + 1))
-  echo "Minor release"
+# Check if there are new commits since the last release
+if [ "$(git rev-parse HEAD)" != "${LAST_HASH}" ]; then
+  echo "New commits found, proceeding to create a new release."
+
+  MAJOR_LAST_RELEASE=$(echo "${LAST_RELEASE}" | awk -v l=${#NEXT_RELEASE} '{ string=substr($0, 1, l); print string; }')
+  echo "Last major release : ${MAJOR_LAST_RELEASE}"
+
+  if [ "${MAJOR_LAST_RELEASE}" = "${NEXT_RELEASE}" ]; then
+    MINOR_LAST_RELEASE="$(echo "${LAST_RELEASE}" | awk -v l=$((${#NEXT_RELEASE} + 2)) '{ string=substr($0, l); print string; }')"
+    NEXT_RELEASE=${MAJOR_LAST_RELEASE}.$((MINOR_LAST_RELEASE + 1))
+    echo "Minor release"
+  fi
+
+  if [ "${NAME}" = "0" ]; then
+    NAME="release: version ${NEXT_RELEASE}"
+  fi
+
+  if [ "${MESSAGE}" = "0" ]; then
+    MESSAGE=$(git log --pretty=format:'%s' "${LAST_HASH}"..HEAD)
+  fi
+
+  echo "Next release : ${NEXT_RELEASE}"
+  echo "${MESSAGE}"
+
+  echo "Create release : ${CREATE_RELEASE}"
+
+  if [ "${CREATE_RELEASE}" = "true" ] || [ "${CREATE_RELEASE}" = true ]; then
+    JSON_STRING=$(jq -n \
+      --arg tn "$NEXT_RELEASE" \
+      --arg tc "$BRANCH" \
+      --arg n "$NEXT_RELEASE" \
+      --arg b "$MESSAGE" \
+      --argjson d "$DRAFT" \
+      --argjson p "$PRE" \
+      '{tag_name: $tn, target_commitish: $tc, name: $n, body: $b, draft: $d, prerelease: $p}')
+    echo "${JSON_STRING}"
+    OUTPUT=$(curl -s --data "${JSON_STRING}" -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases")
+    echo "${OUTPUT}" | jq
+  }
+else
+  echo "No new commits, using the last release: ${LAST_RELEASE}"
+  NEXT_RELEASE="${LAST_RELEASE}"
 fi
 
-if [ "${NAME}" = "0" ]; then
-  NAME="release: version ${NEXT_RELEASE}"
-fi
-
-if [ "${MESSAGE}" = "0" ]; then
-  MESSAGE=$(conventional-changelog)
-fi
-
-echo "Next release : ${NEXT_RELEASE}"
-
-echo "${MESSAGE}"
-
-echo "Create release : ${CREATE_RELEASE}"
-
-if [ "${CREATE_RELEASE}" = "true" ] || [ "${CREATE_RELEASE}" = true ]; then
-  JSON_STRING=$(jq -n \
-    --arg tn "$NEXT_RELEASE" \
-    --arg tc "$BRANCH" \
-    --arg n "$NEXT_RELEASE" \
-    --arg b "$MESSAGE" \
-    --argjson d "$DRAFT" \
-    --argjson p "$PRE" \
-    '{tag_name: $tn, target_commitish: $tc, name: $n, body: $b, draft: $d, prerelease: $p}')
-  echo "${JSON_STRING}"
-  OUTPUT=$(curl -s --data "${JSON_STRING}" -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases")
-  echo "${OUTPUT}" | jq
-  
-  CHANGELOG=$(git log --pretty=format:'- %s (%h)' "${LAST_HASH}"..HEAD | tr '\n' ' |')
-  echo "::set-output name=changelog::${CHANGELOG}"
-  echo "Result:${CHANGELOG}"
-  
-fi
+# Output the changelog
+echo "::set-output name=changelog::${CHANGELOG}"
+echo "Result:${CHANGELOG}"
 
 echo "release=${NEXT_RELEASE}" >>$GITHUB_OUTPUT
+
